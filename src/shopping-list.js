@@ -1,6 +1,7 @@
 import $ from 'jquery';
 
 import store from './store';
+import api from './api'
 
 const generateItemElement = function (item) {
   let itemTitle = `<span class="shopping-item shopping-item__checked">${item.name}</span>`;
@@ -50,8 +51,13 @@ const handleNewItemSubmit = function () {
     event.preventDefault();
     const newItemName = $('.js-shopping-list-entry').val();
     $('.js-shopping-list-entry').val('');
-    store.addItem(newItemName);
-    render();
+    api.createItem(newItemName)
+    .then(res => res.json())
+    .then((newItem) => {
+      store.addItem(newItem);
+      render();
+    })
+    .catch(e => console.log('Something went wrong with adding item.'))
   });
 };
 
@@ -62,23 +68,24 @@ const getItemIdFromElement = function (item) {
 };
 
 const handleDeleteItemClicked = function () {
-  // like in `handleItemCheckClicked`, we use event delegation
   $('.js-shopping-list').on('click', '.js-item-delete', event => {
-    // get the index of the item in store.items
     const id = getItemIdFromElement(event.currentTarget);
-    // delete the item
-    store.findAndDelete(id);
-    // render the updated shopping list
+    api.deleteItem(id)
+    .then(store.findAndDelete(id))
+    .catch(e => console.log('Something went wrong with deleting item.'))
     render();
   });
 };
 
 const handleEditShoppingItemSubmit = function () {
+
   $('.js-shopping-list').on('submit', '.js-edit-item', event => {
     event.preventDefault();
     const id = getItemIdFromElement(event.currentTarget);
     const itemName = $(event.currentTarget).find('.shopping-item').val();
-    store.findAndUpdateName(id, itemName);
+    api.updateItem(id, {name: itemName})
+    .then(store.findAndUpdate(id, {name: itemName}))
+    .catch(console.log('Something went wrong editing the item.'));
     render();
   });
 };
@@ -86,7 +93,9 @@ const handleEditShoppingItemSubmit = function () {
 const handleItemCheckClicked = function () {
   $('.js-shopping-list').on('click', '.js-item-toggle', event => {
     const id = getItemIdFromElement(event.currentTarget);
-    store.findAndToggleChecked(id);
+    api.updateItem(id, {checked: !store.findById(id).checked})
+    .then(store.findAndUpdate(id, {checked: !store.findById(id).checked}))
+    .catch(console.log('Something went wrong checking the item.'));
     render();
   });
 };
